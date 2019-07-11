@@ -10,7 +10,7 @@ namespace do_version
         static void Main(string[] args)
         {
             //Console.WriteLine("\ndomultiversion.exe\n");
-            // We expect either two or six arguments, die if we didn't get them
+            // We expect either four or five arguments, die if we didn't get them
             if (args.Length != 4 && args.Length != 5)
             {
                 Console.WriteLine("Error: Incorrect number of arguments.");
@@ -133,13 +133,22 @@ namespace do_version
                 File.Copy(sourceFile, destFile, true);
             }
 
-            // Delete the original export file
+            // Do a couple more things if the user asked for an export
             if (exportFlag)
             {
+                // Delete the original export file in the build directory
                 string exportFile = buildPath + "\\multi-" + multiType + multiExtension;
                 if (File.Exists(exportFile))
                 {
                     File.Delete(exportFile);
+                }
+
+                // Rename the original export file in the sketch directory
+                string exportSketchFile = sketchPath + "\\multi-" + multiType + multiExtension;
+                string exportDestFile = sketchPath + "\\multi-" + multiType + "-" + multiVersion + multiExtension;
+                if (File.Exists(exportSketchFile))
+                {
+                    File.Move(exportSketchFile, exportDestFile);
                 }
             }
         }
