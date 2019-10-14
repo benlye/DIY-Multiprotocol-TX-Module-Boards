@@ -7,66 +7,85 @@
 ####################################################################
 
 # Board name for the Boards menu
-multistm32f103c.name=Multi 4-in-1 (STM32F103CB)
+multistm32f103c_legacy.name=Multi 4-in-1 F1 Legacy (STM32F1)
 
 # Additional IDE menu(s)
-menu.debug_option=Debug Option
+multistm32f103c_legacy.menu.debug_option=Debug Option
 
 # Default settings which always apply to the board
-multistm32f103c.vid.0=0x1EAF
-multistm32f103c.pid.0=0x0004
-multistm32f103c.build.core=maple
-multistm32f103c.build.cpu_flags=-DMCU_STM32F103CB
-multistm32f103c.build.f_cpu=72000000L
-multistm32f103c.build.flags.optimize=-Os
-multistm32f103c.build.flags.ldspecs=
-multistm32f103c.build.variant=generic_stm32f103c
-multistm32f103c.upload.altID=2
-multistm32f103c.upload.auto_reset=true
-multistm32f103c.upload.file_type=bin
-multistm32f103c.upload.maximum_data_size=20480
-multistm32f103c.upload.protocol=maple_dfu
-multistm32f103c.upload.tool=maple_upload
-multistm32f103c.upload.usbID=1EAF:0003
-multistm32f103c.upload.use_1200bps_touch=false
-multistm32f103c.bootloader.tool=serial_upload
-multistm32f103c.bootloader.file=Multi4in1/StmMulti4in1.bin
+multistm32f103c_legacy.vid.0=0x1EAF
+multistm32f103c_legacy.pid.0=0x0004
+multistm32f103c_legacy.build.core=maple
+multistm32f103c_legacy.build.cpu_flags=-DMCU_STM32F103CB
+multistm32f103c_legacy.build.f_cpu=72000000L
+multistm32f103c_legacy.build.flags.optimize=-Os
+multistm32f103c_legacy.build.flags.ldspecs=
+multistm32f103c_legacy.build.variant=generic_stm32f103c
+multistm32f103c_legacy.upload.altID=2
+multistm32f103c_legacy.upload.auto_reset=true
+multistm32f103c_legacy.upload.file_type=bin
+multistm32f103c_legacy.upload.maximum_data_size=20480
+multistm32f103c_legacy.upload.protocol=maple_dfu
+multistm32f103c_legacy.upload.tool=maple_upload
+multistm32f103c_legacy.upload.usbID=1EAF:0003
+multistm32f103c_legacy.upload.use_1200bps_touch=false
+multistm32f103c_legacy.bootloader.tool=serial_upload
+multistm32f103c_legacy.bootloader.file=Multi4in1/StmMulti4in1.bin
 
 # Default settings which may be overridden by sub-menu choices
-multistm32f103c.build.board=MULTI_STM32_WITH_BOOT=117
-multistm32f103c.build.ldscript=ld/bootloader_20.ld
-multistm32f103c.build.upload_flags=-DSERIAL_USB -DGENERIC_BOOTLOADER
-multistm32f103c.build.vect=VECT_TAB_ADDR=0x8002000
-multistm32f103c.upload.maximum_size=120808
-multistm32f103c.upload.tool=auto_upload
+multistm32f103c_legacy.build.board=MULTI_STM32_WITH_BOOT=117
+multistm32f103c_legacy.build.ldscript=ld/bootloader_20.ld
+multistm32f103c_legacy.build.upload_flags=-DSERIAL_USB -DGENERIC_BOOTLOADER
+multistm32f103c_legacy.build.vect=VECT_TAB_ADDR=0x8002000
+multistm32f103c_legacy.upload.maximum_size=120808
+multistm32f103c_legacy.upload.tool=auto_upload
 
 ## Debug Option menu options
 # No Debugging - default option
 # - Uses the default board settings
 # - Builds firmware with support for the bootloader
 # - Uploads via native USB or FTDI
-multistm32f103c.menu.debug_option.none=None
+multistm32f103c_legacy.menu.debug_option.none=None
 
 # Native USB Debugging - debugging for modules with a native USB port, e.g. iRangeX IRX4 Plus, Banggood, DIY, early JP4IN1
 # - Overrides build flags and upload method
 # - Builds firmware with support for the bootloader
 # - Enables debugging in the Multimodule firmware
 # - Forces upload via USB to prevent uploading to new JP4IN1 modules
-multistm32f103c.menu.debug_option.native=Native USB Debugging
-multistm32f103c.menu.debug_option.native.build.upload_flags=-DSERIAL_USB -DGENERIC_BOOTLOADER -DARDUINO_MULTI_DEBUG
-multistm32f103c.menu.debug_option.native.upload.protocol=maple_dfu
-multistm32f103c.menu.debug_option.native.upload.tool=maple_upload
+multistm32f103c_legacy.menu.debug_option.native=Native USB Debugging
+multistm32f103c_legacy.menu.debug_option.native.build.upload_flags=-DSERIAL_USB -DGENERIC_BOOTLOADER -DARDUINO_MULTI_DEBUG
+multistm32f103c_legacy.menu.debug_option.native.upload.protocol=maple_dfu
+multistm32f103c_legacy.menu.debug_option.native.upload.tool=maple_upload
 
 # Serial/FTDI Debugging - debugging for use with newer JP4IN1 or any module with an external USB-to-serial adapter
 # - Overrides default board settings
 # - Builds firmware without support for the bootloader
 # - Enables debugging in the Multimodule firmware
 # - Forces upload via FTDI to prevent uploading to modules with a USB bootloader installed
-multistm32f103c.menu.debug_option.ftdi=Serial/FTDI Debugging
-multistm32f103c.menu.debug_option.ftdi.build.board=MULTI_STM32_NO_BOOT=117
-multistm32f103c.menu.debug_option.ftdi.build.ldscript=ld/jtag.ld
-multistm32f103c.menu.debug_option.ftdi.build.upload_flags=-DCONFIG_MAPLE_MINI_NO_DISABLE_DEBUG -DARDUINO_MULTI_DEBUG
-multistm32f103c.menu.debug_option.ftdi.build.vect=VECT_TAB_ADDR=0x8000000
-multistm32f103c.menu.debug_option.ftdi.upload.maximum_size=129000
-multistm32f103c.menu.debug_option.ftdi.upload.protocol=maple_serial
-multistm32f103c.menu.debug_option.ftdi.upload.tool=serial_upload
+multistm32f103c_legacy.menu.debug_option.ftdi=Serial/FTDI Debugging
+multistm32f103c_legacy.menu.debug_option.ftdi.build.board=MULTI_STM32_NO_BOOT=117
+multistm32f103c_legacy.menu.debug_option.ftdi.build.ldscript=ld/jtag.ld
+multistm32f103c_legacy.menu.debug_option.ftdi.build.upload_flags=-DCONFIG_MAPLE_MINI_NO_DISABLE_DEBUG -DARDUINO_MULTI_DEBUG
+multistm32f103c_legacy.menu.debug_option.ftdi.build.vect=VECT_TAB_ADDR=0x8000000
+multistm32f103c_legacy.menu.debug_option.ftdi.upload.maximum_size=129000
+multistm32f103c_legacy.menu.debug_option.ftdi.upload.protocol=maple_serial
+multistm32f103c_legacy.menu.debug_option.ftdi.upload.tool=serial_upload
+
+
+####################################################################
+##                    Multi 4-in-1 (STM32F103CB)                  ##
+####################################################################
+
+# Board name for the Boards menu
+multistm32f103cb.name=Multi 4-in-1 F1 (STM32F1)
+
+
+
+####################################################################
+##                    Multi 4-in-1 (STM32F303CC)                  ##
+####################################################################
+
+# Board name for the Boards menu
+multistm32f303cc.name=Multi 4-in-1 F3 (STM32F3)
+
+
