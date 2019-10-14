@@ -1,430 +1,302 @@
-/******************************************************************************
- * The MIT License
+/*
+ * Copyright (c) 2010 by Cristian Maglie <c.maglie@arduino.cc>
+ * Copyright (c) 2014 by Paul Stoffregen <paul@pjrc.com> (Transaction API)
+ * SPI Master library for arduino.
  *
- * Copyright (c) 2010 Perry Hung.
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use, copy,
- * modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- *****************************************************************************/
-
-/**
- * @file wirish/include/wirish/HardwareSPI.h
- * @brief High-level SPI interface
- *
- * This is a "bare essentials" polling driver for now.
+ * This file is free software; you can redistribute it and/or modify
+ * it under the terms of either the GNU General Public License version 2
+ * or the GNU Lesser General Public License version 2.1, both as
+ * published by the Free Software Foundation.
  */
-
-/* TODO [0.1.0] Remove deprecated methods. */
-
-
 
 #ifndef _SPI_H_INCLUDED
 #define _SPI_H_INCLUDED
 
-#include <libmaple/libmaple_types.h>
-#include <libmaple/spi.h>
-#include <libmaple/dma.h>
-
-#include <boards.h>
-#include <stdint.h>
-#include <wirish.h>
+#include "Arduino.h"
+#include <stdio.h>
 
 // SPI_HAS_TRANSACTION means SPI has
 //   - beginTransaction()
 //   - endTransaction()
 //   - usingInterrupt()
 //   - SPISetting(clock, bitOrder, dataMode)
-//#define SPI_HAS_TRANSACTION
+#define SPI_HAS_TRANSACTION 1
 
-#define SPI_CLOCK_DIV2   SPI_BAUD_PCLK_DIV_2
-#define SPI_CLOCK_DIV4   SPI_BAUD_PCLK_DIV_4
-#define SPI_CLOCK_DIV8   SPI_BAUD_PCLK_DIV_8
-#define SPI_CLOCK_DIV16  SPI_BAUD_PCLK_DIV_16
-#define SPI_CLOCK_DIV32  SPI_BAUD_PCLK_DIV_32
-#define SPI_CLOCK_DIV64  SPI_BAUD_PCLK_DIV_64
-#define SPI_CLOCK_DIV128 SPI_BAUD_PCLK_DIV_128
-#define SPI_CLOCK_DIV256 SPI_BAUD_PCLK_DIV_256
+// Compatibility with sketches designed for AVR @ 16 MHz could not
+// be ensured as SPI frequency depends of system clock configuration.
+// user have to use appropriate divider for the SPI clock
+// This function should not be used in new project.
+// Use SPISettings with SPI.beginTransaction() to configure SPI parameters.
+#define SPI_CLOCK_DIV2   2
+#define SPI_CLOCK_DIV4   4
+#define SPI_CLOCK_DIV8   8
+#define SPI_CLOCK_DIV16  16
+#define SPI_CLOCK_DIV32  32
+#define SPI_CLOCK_DIV64  64
+#define SPI_CLOCK_DIV128 128
 
-/*
- * Roger Clark. 20150106
- * Commented out redundant AVR defined
- * 
-#define SPI_MODE_MASK 0x0C  // CPOL = bit 3, CPHA = bit 2 on SPCR
-#define SPI_CLOCK_MASK 0x03  // SPR1 = bit 1, SPR0 = bit 0 on SPCR
-#define SPI_2XCLOCK_MASK 0x01  // SPI2X = bit 0 on SPSR
+// SPI mode parameters for SPISettings
+#define SPI_MODE0 0x00
+#define SPI_MODE1 0x01
+#define SPI_MODE2 0x02
+#define SPI_MODE3 0x03
 
-// define SPI_AVR_EIMSK for AVR boards with external interrupt pins
-#if defined(EIMSK)
-  #define SPI_AVR_EIMSK  EIMSK
-#elif defined(GICR)
-  #define SPI_AVR_EIMSK  GICR
-#elif defined(GIMSK)
-  #define SPI_AVR_EIMSK  GIMSK
-#endif
-*/
-
-#ifndef STM32_LSBFIRST
-#define STM32_LSBFIRST 0
-#endif
-#ifndef STM32_MSBFIRST
-#define STM32_MSBFIRST 1
-#endif
-
-// PC13 or PA4
-#define BOARD_SPI_DEFAULT_SS PA4
-//#define BOARD_SPI_DEFAULT_SS PC13
-
-#define SPI_MODE0 SPI_MODE_0
-#define SPI_MODE1 SPI_MODE_1
-#define SPI_MODE2 SPI_MODE_2
-#define SPI_MODE3 SPI_MODE_3
-
-#define DATA_SIZE_8BIT SPI_CR1_DFF_8_BIT
-#define DATA_SIZE_16BIT SPI_CR1_DFF_16_BIT
-
-typedef enum {
-		SPI_STATE_IDLE,
-		SPI_STATE_READY,
-		SPI_STATE_RECEIVE,
-		SPI_STATE_TRANSMIT,
-        SPI_STATE_TRANSFER
-	} spi_mode_t;
-class SPISettings {
-public:
-	SPISettings(uint32_t clock, BitOrder bitOrder, uint8_t dataMode) {
-		if (__builtin_constant_p(clock)) {
-			init_AlwaysInline(clock, bitOrder, dataMode, DATA_SIZE_8BIT);
-		} else {
-			init_MightInline(clock, bitOrder, dataMode, DATA_SIZE_8BIT);
-		}
-	}
-	SPISettings(uint32_t clock, BitOrder bitOrder, uint8_t dataMode, uint32_t dataSize) {
-		if (__builtin_constant_p(clock)) {
-			init_AlwaysInline(clock, bitOrder, dataMode, dataSize);
-		} else {
-			init_MightInline(clock, bitOrder, dataMode, dataSize);
-		}
-	}
-	SPISettings(uint32_t clock) {
-		if (__builtin_constant_p(clock)) {
-			init_AlwaysInline(clock, MSBFIRST, SPI_MODE0, DATA_SIZE_8BIT);
-		} else {
-			init_MightInline(clock, MSBFIRST, SPI_MODE0, DATA_SIZE_8BIT);
-		}
-	}
-	SPISettings() { init_AlwaysInline(4000000, MSBFIRST, SPI_MODE0, DATA_SIZE_8BIT); }
-private:
-	void init_MightInline(uint32_t clock, BitOrder bitOrder, uint8_t dataMode, uint32_t dataSize) {
-		init_AlwaysInline(clock, bitOrder, dataMode, dataSize);
-	}
-	void init_AlwaysInline(uint32_t clock, BitOrder bitOrder, uint8_t dataMode, uint32_t dataSize) __attribute__((__always_inline__)) {
-		this->clock = clock;
-		this->bitOrder = bitOrder;
-		this->dataMode = dataMode;
-		this->dataSize = dataSize;
-	}
-	uint32_t clock;
-  uint32_t dataSize;
-  uint32_t clockDivider;
-	BitOrder bitOrder;
-	uint8_t dataMode;
-  uint8_t _SSPin;
-	volatile spi_mode_t state;
-	spi_dev *spi_d;
-	dma_channel spiRxDmaChannel, spiTxDmaChannel;
-	dma_dev* spiDmaDev;
-  void (*receiveCallback)(void) = NULL;
-  void (*transmitCallback)(void) = NULL;
-	
-	friend class SPIClass;
+// Transfer mode
+enum SPITransferMode {
+  SPI_CONTINUE, /* Transfer not finished: CS pin kept active */
+  SPI_LAST      /* Transfer ended: CS pin released */
 };
 
+// Indicates the user controls himself the CS pin outside of the spi class
+#define CS_PIN_CONTROLLED_BY_USER  NUM_DIGITAL_PINS
+
+// Indicates there is no configuration selected
+#define NO_CONFIG   ((int16_t)(-1))
+
+// Defines a default timeout delay in milliseconds for the SPI transfer
+#define SPI_TRANSFER_TIMEOUT    1000
 
 /*
-    Should move this to within the class once tested out, just for tidyness
-*/
-static uint8_t __attribute__ ((unused)) ff = 0XFF;
-static void __attribute__ ((unused)) (*_spi1_this);
-static void __attribute__ ((unused)) (*_spi2_this);
-#if BOARD_NR_SPI >= 3
-static void __attribute__ ((unused)) (*_spi3_this);
+ * Defines the number of settings saved per SPI instance. Must be in range 1 to 254.
+ * Can be redefined in variant.h
+ */
+#ifndef NB_SPI_SETTINGS
+#define NB_SPI_SETTINGS 4
 #endif
 
-/**
- * @brief Wirish SPI interface.
- *
- * This implementation uses software slave management, so the caller
- * is responsible for controlling the slave select line.
- */
+class SPISettings {
+  public:
+    SPISettings(uint32_t clock, BitOrder bitOrder, uint8_t dataMode)
+    {
+      clk = clock;
+
+      if (bitOrder == MSBFIRST) {
+        msb = 1;
+      } else {
+        msb = 0;
+      }
+      bOrder = bitOrder;
+
+      if (SPI_MODE0 == dataMode) {
+        dMode = SPI_MODE_0;
+      } else if (SPI_MODE1 == dataMode) {
+        dMode = SPI_MODE_1;
+      } else if (SPI_MODE2 == dataMode) {
+        dMode = SPI_MODE_2;
+      } else if (SPI_MODE3 == dataMode) {
+        dMode = SPI_MODE_3;
+      }
+
+    }
+    SPISettings()
+    {
+      pinCS = -1;
+      clk = SPI_SPEED_CLOCK_DEFAULT;
+      bOrder = MSBFIRST;
+      msb = 1;
+      dMode = SPI_MODE_0;
+    }
+  private:
+    int16_t pinCS;      //CS pin associated to the configuration
+    uint32_t clk;       //specifies the spi bus maximum clock speed
+    BitOrder bOrder;    //bit order (MSBFirst or LSBFirst)
+    spi_mode_e dMode;   //one of the data mode
+    //Mode          Clock Polarity (CPOL)   Clock Phase (CPHA)
+    //SPI_MODE0             0                     0
+    //SPI_MODE1             0                     1
+    //SPI_MODE2             1                     0
+    //SPI_MODE3             1                     1
+    uint8_t msb;        //set to 1 if msb first
+    friend class SPIClass;
+};
+
 class SPIClass {
-public:
+  public:
+    SPIClass();
+    SPIClass(uint8_t mosi, uint8_t miso, uint8_t sclk, uint8_t ssel = (uint8_t)NC);
 
-    /**
-     * @param spiPortNumber Number of the SPI port to manage.
-     */
-    SPIClass(uint32 spiPortNumber);
+    // setMISO/MOSI/SCLK/SSEL have to be called before begin()
+    void setMISO(uint32_t miso)
+    {
+      _spi.pin_miso = digitalPinToPinName(miso);
+    };
+    void setMOSI(uint32_t mosi)
+    {
+      _spi.pin_mosi = digitalPinToPinName(mosi);
+    };
+    void setSCLK(uint32_t sclk)
+    {
+      _spi.pin_sclk = digitalPinToPinName(sclk);
+    };
+    void setSSEL(uint32_t ssel)
+    {
+      _spi.pin_ssel = digitalPinToPinName(ssel);
+    };
 
-    /*
-     * Set up/tear down
-     */
+    void setMISO(PinName miso)
+    {
+      _spi.pin_miso = (miso);
+    };
+    void setMOSI(PinName mosi)
+    {
+      _spi.pin_mosi = (mosi);
+    };
+    void setSCLK(PinName sclk)
+    {
+      _spi.pin_sclk = (sclk);
+    };
+    void setSSEL(PinName ssel)
+    {
+      _spi.pin_ssel = (ssel);
+    };
 
-    /**
-     * @brief Equivalent to begin(SPI_1_125MHZ, MSBFIRST, 0).
-     */
-    void begin(void);
-
-    /**
-     * @brief Turn on a SPI port and set its GPIO pin modes for use as a slave.
-     *
-     * SPI port is enabled in full duplex mode, with software slave management.
-     *
-     * @param bitOrder Either LSBFIRST (little-endian) or MSBFIRST(big-endian)
-     * @param mode SPI mode to use
-     */
-    void beginSlave(uint32 bitOrder, uint32 mode);
-
-    /**
-     * @brief Equivalent to beginSlave(MSBFIRST, 0).
-     */
-    void beginSlave(void);
-
-    /**
-     * @brief Disables the SPI port, but leaves its GPIO pin modes unchanged.
-     */
+    void begin(uint8_t _pin = CS_PIN_CONTROLLED_BY_USER);
     void end(void);
 
-	void beginTransaction(SPISettings settings) { beginTransaction(BOARD_SPI_DEFAULT_SS, settings); }
-	void beginTransaction(uint8_t pin, SPISettings settings);
-	void endTransaction(void);
-
-	void beginTransactionSlave(SPISettings settings);
-
-	void setClockDivider(uint32_t clockDivider);
-	void setBitOrder(BitOrder bitOrder);	
-	void setDataMode(uint8_t dataMode);		
-	
-	// SPI Configuration methods
-	void attachInterrupt(void);
-	void detachInterrupt(void);
-	
-	/*	Victor Perez. Added to change datasize from 8 to 16 bit modes on the fly.
-	*	Input parameter should be SPI_CR1_DFF set to 0 or 1 on a 32bit word.
-	*	Requires an added function spi_data_size on  STM32F1 / cores / maple / libmaple / spi.c 
-	*/
-    void setDataSize(uint32 ds);
-	
-    /*  Victor Perez 2017. Added to set and clear callback functions for callback
-	* on DMA transfer completion.
-	* onReceive used to set the callback in case of dmaTransfer (tx/rx), once rx is completed
-	* onTransmit used to set the callback in case of dmaSend (tx only). That function
-	* will NOT be called in case of TX/RX
-    */
-    void onReceive(void(*)(void));
-    void onTransmit(void(*)(void));
-
-    /*
-     * I/O
+    /* This function should be used to configure the SPI instance in case you
+     * don't use default parameters.
+     * You can attach another CS pin to the SPI instance and each CS pin can be
+     * attach with specific SPI settings.
      */
-
-    /**
-     * @brief Return the next unread byte/word.
-     *
-     * If there is no unread byte/word waiting, this function will block
-     * until one is received.
-     */
-    uint16 read(void);
-
-    /**
-     * @brief Read length bytes, storing them into buffer.
-     * @param buffer Buffer to store received bytes into.
-     * @param length Number of bytes to store in buffer. This
-     *               function will block until the desired number of
-     *               bytes have been read.
-     */
-    void read(uint8 *buffer, uint32 length);
-
-    /**
-     * @brief Transmit one byte/word.
-     * @param data to transmit.
-     */
-    void write(uint16 data);
-    void write16(uint16 data); // write 2 bytes in 8 bit mode (DFF=0)
-
-    /**
-     * @brief Transmit one byte/word a specified number of times.
-     * @param data to transmit.
-     */
-    void write(uint16 data, uint32 n);	
-
-    /**
-     * @brief Transmit multiple bytes/words.
-     * @param buffer Bytes/words to transmit.
-     * @param length Number of bytes/words in buffer to transmit.
-     */
-    void write(const void * buffer, uint32 length);
-
-    /**
-     * @brief Transmit a byte, then return the next unread byte.
-     *
-     * This function transmits before receiving.
-     *
-     * @param data Byte to transmit.
-     * @return Next unread byte.
-     */
-    uint8 transfer(uint8 data) const;
-    uint16_t transfer16(uint16_t data) const;
-
-	/**
-     * @brief Sets up a DMA Transfer for "length" bytes.
-	 * The transfer mode (8 or 16 bit mode) is evaluated from the SPI peripheral setting.
-     *
-     * This function transmits and receives to buffers.
-     *
-     * @param transmitBuf buffer Bytes to transmit. If passed as 0, it sends FF repeatedly for "length" bytes
-     * @param receiveBuf buffer Bytes to save received data. 
-     * @param length Number of bytes in buffer to transmit.
-	 */
-    uint8 dmaTransfer(const void * transmitBuf, void * receiveBuf, uint16 length);
-    void dmaTransferSet(const void *transmitBuf, void *receiveBuf);
-    uint8 dmaTransferRepeat(uint16 length);
-
-	/**
-     * @brief Sets up a DMA Transmit for SPI 8 or 16 bit transfer mode.
-	 * The transfer mode (8 or 16 bit mode) is evaluated from the SPI peripheral setting.
-     *
-     * This function only transmits and does not care about the RX fifo.
-     *
-     * @param data buffer half words to transmit,
-     * @param length Number of bytes in buffer to transmit.
-	 * @param minc Set to use Memory Increment mode, clear to use Circular mode.
-     */
-    uint8 dmaSend(const void * transmitBuf, uint16 length, bool minc = 1);
-    void dmaSendSet(const void * transmitBuf, bool minc);
-    uint8 dmaSendRepeat(uint16 length);
-
-    uint8 dmaSendAsync(const void * transmitBuf, uint16 length, bool minc = 1);
-    /*
-     * Pin accessors
-     */
-
-    /**
-     * @brief Return the number of the MISO (master in, slave out) pin
-     */
-    uint8 misoPin(void);
-
-    /**
-     * @brief Return the number of the MOSI (master out, slave in) pin
-     */
-    uint8 mosiPin(void);
-
-    /**
-     * @brief Return the number of the SCK (serial clock) pin
-     */
-    uint8 sckPin(void);
-
-    /**
-     * @brief Return the number of the NSS (slave select) pin
-     */
-    uint8 nssPin(void);
-
-    /* Escape hatch */
-
-    /**
-     * @brief Get a pointer to the underlying libmaple spi_dev for
-     *        this HardwareSPI instance.
-     */
-    spi_dev* c_dev(void) { return _currentSetting->spi_d; }
-
-    spi_dev *dev(){ return _currentSetting->spi_d;}
-
-    /**
-    * @brief Sets the number of the SPI peripheral to be used by
-    *        this HardwareSPI instance.
-    *
-    * @param spi_num Number of the SPI port. 1-2 in low density devices
-    *			or 1-3 in high density devices.
-    */
-    void setModule(int spi_num)
+    void beginTransaction(uint8_t pin, SPISettings settings);
+    void beginTransaction(SPISettings settings)
     {
-        _currentSetting=&_settings[spi_num-1];// SPI channels are called 1 2 and 3 but the array is zero indexed
+      beginTransaction(CS_PIN_CONTROLLED_BY_USER, settings);
     }
 
-    /* -- The following methods are deprecated --------------------------- */
+    void endTransaction(uint8_t pin);
+    void endTransaction(void)
+    {
+      endTransaction(CS_PIN_CONTROLLED_BY_USER);
+    }
 
-    /**
-     * @brief Deprecated.
-     *
-     * Use HardwareSPI::transfer() instead.
-     *
-     * @see HardwareSPI::transfer()
+    /* Transfer functions: must be called after initialization of the SPI
+     * instance with begin() or beginTransaction().
+     * You can specify the CS pin to use.
      */
-    uint8 send(uint8 data);
+    byte transfer(uint8_t pin, uint8_t _data, SPITransferMode _mode = SPI_LAST);
+    uint16_t transfer16(uint8_t pin, uint16_t _data, SPITransferMode _mode = SPI_LAST);
+    void transfer(uint8_t pin, void *_buf, size_t _count, SPITransferMode _mode = SPI_LAST);
+    void transfer(byte _pin, void *_bufout, void *_bufin, size_t _count, SPITransferMode _mode = SPI_LAST);
 
-    /**
-     * @brief Deprecated.
-     *
-     * Use HardwareSPI::write() in combination with
-     * HardwareSPI::read() (or HardwareSPI::transfer()) instead.
-     *
-     * @see HardwareSPI::write()
-     * @see HardwareSPI::read()
-     * @see HardwareSPI::transfer()
+    // Transfer functions when user controls himself the CS pin.
+    byte transfer(uint8_t _data, SPITransferMode _mode = SPI_LAST)
+    {
+      return transfer(CS_PIN_CONTROLLED_BY_USER, _data, _mode);
+    }
+
+    uint16_t transfer16(uint16_t _data, SPITransferMode _mode = SPI_LAST)
+    {
+      return transfer16(CS_PIN_CONTROLLED_BY_USER, _data, _mode);
+    }
+
+    void transfer(void *_buf, size_t _count, SPITransferMode _mode = SPI_LAST)
+    {
+      transfer(CS_PIN_CONTROLLED_BY_USER, _buf, _count, _mode);
+    }
+
+    void transfer(void *_bufout, void *_bufin, size_t _count, SPITransferMode _mode = SPI_LAST)
+    {
+      transfer(CS_PIN_CONTROLLED_BY_USER, _bufout, _bufin, _count, _mode);
+    }
+
+    /* These methods are deprecated and kept for compatibility.
+     * Use SPISettings with SPI.beginTransaction() to configure SPI parameters.
      */
-    uint8 send(uint8 *data, uint32 length);
+    void setBitOrder(uint8_t _pin, BitOrder);
+    void setBitOrder(BitOrder _order)
+    {
+      setBitOrder(CS_PIN_CONTROLLED_BY_USER, _order);
+    }
 
-    /**
-     * @brief Deprecated.
-     *
-     * Use HardwareSPI::read() instead.
-     *
-     * @see HardwareSPI::read()
-     */
-    uint8 recv(void);
+    void setDataMode(uint8_t _pin, uint8_t);
+    void setDataMode(uint8_t _mode)
+    {
+      setDataMode(CS_PIN_CONTROLLED_BY_USER, _mode);
+    }
 
-private:
+    void setClockDivider(uint8_t _pin, uint8_t);
+    void setClockDivider(uint8_t _div)
+    {
+      setClockDivider(CS_PIN_CONTROLLED_BY_USER, _div);
+    }
 
-	SPISettings _settings[BOARD_NR_SPI];
-	SPISettings *_currentSetting;
+    // Not implemented functions. Kept for backward compatibility.
+    void usingInterrupt(uint8_t interruptNumber);
+    void attachInterrupt(void);
+    void detachInterrupt(void);
 
-	void updateSettings(void);
-    /*
-	* Functions added for DMA transfers with Callback. 
-	* Experimental.
-	*/
+  private:
+    /* Contains various spiSettings for the same spi instance. Each spi spiSettings
+    is associated to a CS pin. */
+    SPISettings   spiSettings[NB_SPI_SETTINGS];
 
-    void EventCallback(void);
+    // Use to know which configuration is selected.
+    int16_t       _CSPinConfig;
 
-    static void _spi1EventCallback(void);
-    static void _spi2EventCallback(void);
-    #if BOARD_NR_SPI >= 3
-    static void _spi3EventCallback(void);
-    #endif
-	/*
-	spi_dev *spi_d;
-	uint8_t _SSPin;
-	uint32_t clockDivider;
-	uint8_t dataMode;
-	BitOrder bitOrder;
-	*/
+    // spi instance
+    spi_t         _spi;
+
+
+    typedef enum {
+      GET_IDX = 0,
+      ADD_NEW_PIN = 1
+    } pin_option_t;
+
+    uint8_t pinIdx(uint8_t _pin, pin_option_t option)
+    {
+      uint8_t i;
+
+      if (_pin > NUM_DIGITAL_PINS) {
+        return NB_SPI_SETTINGS;
+      }
+
+      for (i = 0; i < NB_SPI_SETTINGS; i++) {
+        if (_pin == spiSettings[i].pinCS) {
+          return i;
+        }
+      }
+
+      if (option == ADD_NEW_PIN) {
+        for (i = 0; i < NB_SPI_SETTINGS; i++) {
+          if (spiSettings[i].pinCS == -1) {
+            spiSettings[i].pinCS = _pin;
+            return i;
+          }
+        }
+      }
+      return i;
+    }
+
+    void RemovePin(uint8_t _pin)
+    {
+      if (_pin > NUM_DIGITAL_PINS) {
+        return;
+      }
+
+      for (uint8_t i = 0; i < NB_SPI_SETTINGS; i++) {
+        if (spiSettings[i].pinCS == _pin) {
+          spiSettings[i].pinCS = -1;
+          spiSettings[i].clk = SPI_SPEED_CLOCK_DEFAULT;
+          spiSettings[i].bOrder = MSBFIRST;
+          spiSettings[i].msb = 1;
+          spiSettings[i].dMode = SPI_MODE_0;
+        }
+      }
+    }
+
+    void RemoveAllPin(void)
+    {
+      for (uint8_t i = 0; i < NB_SPI_SETTINGS; i++) {
+        spiSettings[i].pinCS = -1;
+        spiSettings[i].clk = SPI_SPEED_CLOCK_DEFAULT;
+        spiSettings[i].bOrder = MSBFIRST;
+        spiSettings[i].msb = 1;
+        spiSettings[i].dMode = SPI_MODE_0;
+      }
+    }
 };
 
+extern SPIClass SPI;
 
-extern SPIClass SPI;//(1);// dummy params
 #endif

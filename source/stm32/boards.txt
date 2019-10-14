@@ -20,7 +20,7 @@ multistm32f103c_legacy.build.cpu_flags=-DMCU_STM32F103CB
 multistm32f103c_legacy.build.f_cpu=72000000L
 multistm32f103c_legacy.build.flags.optimize=-Os
 multistm32f103c_legacy.build.flags.ldspecs=
-multistm32f103c_legacy.build.variant=generic_stm32f103c
+multistm32f103c_legacy.build.variant=maple_stm32f103c
 multistm32f103c_legacy.upload.altID=2
 multistm32f103c_legacy.upload.auto_reset=true
 multistm32f103c_legacy.upload.file_type=bin
@@ -79,6 +79,19 @@ multistm32f103c_legacy.menu.debug_option.ftdi.upload.tool=serial_upload
 # Board name for the Boards menu
 multistm32f103cb.name=Multi 4-in-1 F1 (STM32F1)
 
+multistm32f103cb.build.vid=0x0483
+multistm32f103cb.build.core=stm32duino
+multistm32f103cb.build.board=MULTI_STM32F103_WITH_BOOT=120
+multistm32f103cb.build.product_line=STM32F103xB
+multistm32f103cb.build.variant=stm32duino_f103xx
+
+multistm32f103cb.build.mcu=cortex-m3
+multistm32f103cb.build.series=STM32F1xx
+multistm32f103cb.build.cmsis_lib_gcc=arm_cortexM3l_math
+multistm32f103cb.build.extra_flags=-D{build.product_line} {build.enable_usb} {build.xSerial} {build.bootloader_flags}
+multistm32f103cb.upload.maximum_size=131072
+multistm32f103cb.upload.maximum_data_size=20480
+
 
 
 ####################################################################
@@ -88,4 +101,17 @@ multistm32f103cb.name=Multi 4-in-1 F1 (STM32F1)
 # Board name for the Boards menu
 multistm32f303cc.name=Multi 4-in-1 F3 (STM32F3)
 
+
+multistm32f303cc.build.vid=0x0483
+multistm32f303cc.build.core=stm32duino
+multistm32f303cc.build.board=MULTI_STM32F303_WITH_BOOT=120
+multistm32f303cc.build.product_line=STM32F303xC
+multistm32f303cc.build.variant=stm32duino_f303xx
+multistm32f303cc.build.extra_flags=-D{build.product_line} {build.enable_usb} {build.xSerial} {build.bootloader_flags}
+multistm32f303cc.build.mcu=cortex-m4
+multistm32f303cc.build.flags.fp=-mfpu=fpv4-sp-d16 -mfloat-abi=hard
+multistm32f303cc.build.series=STM32F3xx
+multistm32f303cc.build.cmsis_lib_gcc=arm_cortexM4l_math
+multistm32f303cc.upload.maximum_size=262144
+multistm32f303cc.upload.maximum_data_size=40960
 
