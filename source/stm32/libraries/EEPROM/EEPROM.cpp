@@ -254,7 +254,7 @@ uint16 EEPROMClass::EE_VerifyPageFullWriteVariable(uint16 Address, uint16 Data)
 	// Empty slot not found, need page transfer
 	// Calculate unique variables in page
 	count = EE_GetVariablesCount(pageBase, Address) + 1;
-	if (count >= (PageSize / 4 - 1))
+	if (count > (PageSize / 4 - 1))
 		return EEPROM_OUT_SIZE;
 
 	if (pageBase == PageBase1)
